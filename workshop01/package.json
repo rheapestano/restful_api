@@ -1,5 +1,5 @@
 {
-  "name": "ssf_day05_review",
+  "name": "workshop01",
   "version": "1.0.0",
   "description": "",
   "main": "main.js",
@@ -8,14 +8,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/chukmunnlee/ssf_day05_review.git"
+    "url": "git+https://github.com/rheapestano/restful_api.git"
   },
   "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/chukmunnlee/ssf_day05_review/issues"
-  },
-  "homepage": "https://github.com/chukmunnlee/ssf_day05_review#readme",
   "dependencies": {
     "express": "^4.17.1",
     "express-handlebars": "^3.1.0",
