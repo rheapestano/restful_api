@@ -52,19 +52,24 @@ app.get('/api/state/:state', (req, res) => {
 	res.type('application/json');
 	db.findAllStates()
 		.then(result => {
+
+			console.log(result.indexOf(stateAbbr.toUpperCase()))
+			console.log(result)
+			
 			if (result.indexOf(stateAbbr.toUpperCase()) < 0) {
 				res.status(400); 
             	res.send({ error : `Not a valid state : ${stateAbbr}` }); 
             	return;
 			}
 			const params = {
-				offset : parseInt(req.query.offset) || 10,
+				offset : parseInt(req.query.offset) || 0,
 				limit : parseInt(req.query.limit) || 10
 			}
 
 			return (db.findCitiesByState(stateAbbr, params))
 		}) 
 		.then(result => {
+			console.log(result)
 			res.status(200);
 			res.json(result.map(v => `/api/city/${v}`));
 
@@ -78,7 +83,6 @@ app.get('/api/state/:state', (req, res) => {
 });
 
 
-
 // TODO GET /api/city/:cityId
 app.get('/api/city/:cityId', (req, res) => {
 
@@ -87,9 +91,16 @@ app.get('/api/city/:cityId', (req, res) => {
 	res.type('application/json');
 	db.findCityById(cityId)
 		.then(result => {
-			res.status(200);
-			res.json(result);
+			if (result.length > 0) {
+				res.status(200);
+				res.json(result[0]);
+				return;
+			}
 
+			res.status(400); 
+			res.send({ error : `City not found : ${cityId}` }); 
+			return;
+			
 		})
 		.catch(error => {
 			res.status(400); 
@@ -100,7 +111,24 @@ app.get('/api/city/:cityId', (req, res) => {
 });
 
 // TODO POST /api/city
+app.post('/api/city', (req, res) => {
 
+	const newCity = req.body;
+	res.type('application/json');
+	
+	db.insertCity(newCity)
+		.then(result => {
+			res.status(201);
+			res.json(result);
+			return;
+		})
+		.catch(error => {
+			res.status(400); 
+            res.send({ error : error }); 
+            return;
+		});
+
+});
 
 
 

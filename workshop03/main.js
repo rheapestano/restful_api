@@ -35,12 +35,122 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // TODO 1/2 Load schemans
+const citySchema = require('./schema/city-schema.json')
 
-
+new OpenAPIValidator({
+	apiSpecPath: join(__dirname, 'schema', 'city-api.yaml')
+}).install(app)
 
 
 // Start of workshop
-// TODO 2/2 Copy your routes from workshop02 here
+// Mandatory workshop
+app.get('/api/states', (req, res) => {
+	res.type('application/json');
+	db.findAllStates()
+		.then(result => {
+			res.status(200);
+			res.json(result);
+
+		})
+		.catch(error => {
+			res.status(400); 
+            res.send({ error : error }); 
+            return;
+		});
+
+});
+
+app.get('/api/state/:state', (req, res) => {
+
+	const stateAbbr = req.params.state;
+
+	res.type('application/json');
+	db.findAllStates()
+		.then(result => {
+
+			console.log(result.indexOf(stateAbbr.toUpperCase()))
+			console.log(result)
+			
+			if (result.indexOf(stateAbbr.toUpperCase()) < 0) {
+				res.status(400); 
+            	res.send({ error : `Not a valid state : ${stateAbbr}` }); 
+            	return;
+			}
+			const params = {
+				offset : parseInt(req.query.offset) || 0,
+				limit : parseInt(req.query.limit) || 10
+			}
+
+			return (db.findCitiesByState(stateAbbr, params))
+		}) 
+		.then(result => {
+			console.log(result)
+			res.status(200);
+			res.json(result.map(v => `/api/city/${v}`));
+
+		})
+		.catch(error => {
+			res.status(400); 
+            res.send({ error : error }); 
+            return;
+		});
+
+});
+
+
+app.get('/api/city/:cityId', (req, res) => {
+
+	const cityId = req.params.cityId;
+
+	res.type('application/json');
+	db.findCityById(cityId)
+		.then(result => {
+			if (result.length > 0) {
+				res.status(200);
+				res.json(result[0]);
+				return;
+			}
+
+			res.status(400); 
+			res.send({ error : `City not found : ${cityId}` }); 
+			return;
+			
+		})
+		.catch(error => {
+			res.status(400); 
+            res.send({ error : error }); 
+            return;
+		});
+
+});
+
+app.post('/api/city', (req, res) => {
+	schemaValidator.validate( { body : citySchema} )
+
+	const newCity = req.body;
+	res.type('application/json');
+	
+	db.insertCity(newCity)
+		.then(result => {
+			res.status(201);
+			res.json(result);
+			return;
+		})
+		.catch(error => {
+			res.status(400); 
+            res.send({ error : error }); 
+            return;
+		});
+
+});
+
+
+
+// Optional workshop
+// TODO HEAD /api/state/:state
+// TODO GET /state/:state/count
+// TODO GET /city/:name
+
 
 
 // End of workshop
