@@ -20,7 +20,8 @@ const express = require('express')
 const CitiesDB = require('./citiesdb');
 
 const serviceId = uuid().substring(0, 8);
-const serviceName = `zips-${serviceId}`
+//const serviceName = `zips-${serviceId}`
+const serviceName = 'zips-Rhea'
 
 //Load application keys
 //Rename _keys.json file to keys.json
@@ -48,13 +49,126 @@ app.use(express.urlencoded({ extended: true }));
 // Start of workshop
 
 // TODO 1/3 Load schemans
+const citySchema = require('./schema/city-schema.json')
+
+/*new OpenAPIValidator({
+	apiSpecPath: join(__dirname, 'schema', 'city-api.yaml')
+}).install(app)
+*/
+
+
+app.get('/api/states', 
+	cacheControl( { maxAge :30, private : false}),
+	(req, res) => {
+
+	console.info('getting list of states', new Date())
+
+
+	res.type('application/json');
+	db.findAllStates()
+		.then(result => {
+			res.status(200);
+			res.json(result);
+
+		})
+		.catch(error => {
+			res.status(400); 
+            res.send({ error : error }); 
+            return;
+		});
+
+});
+
+app.get('/api/state/:state', (req, res) => {
+
+	const stateAbbr = req.params.state;
+
+	res.type('application/json');
+	db.findAllStates()
+		.then(result => {
+
+			console.log(result.indexOf(stateAbbr.toUpperCase()))
+			console.log(result)
+			
+			if (result.indexOf(stateAbbr.toUpperCase()) < 0) {
+				res.status(400); 
+            	res.send({ error : `Not a valid state : ${stateAbbr}` }); 
+            	return;
+			}
+			const params = {
+				offset : parseInt(req.query.offset) || 0,
+				limit : parseInt(req.query.limit) || 10
+			}
+
+			return (db.findCitiesByState(stateAbbr, params))
+		}) 
+		.then(result => {
+			console.log(result)
+			res.status(200);
+			res.json(result.map(v => `/api/city/${v}`));
+
+		})
+		.catch(error => {
+			res.status(400); 
+            res.send({ error : error }); 
+            return;
+		});
+
+});
+
+
+app.get('/api/city/:cityId', (req, res) => {
+
+	const cityId = req.params.cityId;
+
+	res.type('application/json');
+	db.findCityById(cityId)
+		.then(result => {
+			if (result.length > 0) {
+				res.status(200);
+				res.json(result[0]);
+				return;
+			}
+
+			res.status(400); 
+			res.send({ error : `City not found : ${cityId}` }); 
+			return;
+			
+		})
+		.catch(error => {
+			res.status(400); 
+            res.send({ error : error }); 
+            return;
+		});
+
+});
+
+app.post('/api/city', (req, res) => {
+	schemaValidator.validate( { body : citySchema} )
+
+	const newCity = req.body;
+	res.type('application/json');
+	
+	db.insertCity(newCity)
+		.then(result => {
+			res.status(201);
+			res.json(result);
+			return;
+		})
+		.catch(error => {
+			res.status(400); 
+            res.send({ error : error }); 
+            return;
+		});
+
+});
 
 
 
-
-// TODO 2/3 Copy your routes from workshop03 here
-
-
+// Optional workshop
+// TODO HEAD /api/state/:state
+// TODO GET /state/:state/count
+// TODO GET /city/:name
 
 
 
@@ -87,8 +201,35 @@ db.getDB()
 			console.info(`\tService id: ${serviceId}`);
 
 			// TODO 3/3 Add service registration here
+			consul.agent.service.register({
+				id : serviceId,
+				name : serviceName,
+				port: PORT,
+				check: {
+					// not recommended for use if you are using OpenAPI
+					//http : `http://localhost:${PORT}/health`,
+					//interval : '10s',
+					'ttl' : '5s',
+					deregistercriticalserviceafter : '20s'
+				}  
+			})
+			.catch(error=> {
+				console.info('error: ', error)
+			})
 
-
+			// server to check heartbeat
+			setInterval(
+				() => {
+					console.info('checking for heartbeat', new Date())
+					consul.agent.check.pass({
+						id : `service:${serviceId}`
+					}).catch(error=> {
+						console.info('error: ', error)
+					})
+				},
+				5000
+			)
+			
 
 
 		});
